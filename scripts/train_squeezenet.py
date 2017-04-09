@@ -3,7 +3,7 @@ sys.path.append("./scripts/data_loader")
 sys.path.append("./models")
 from mnist_loader import load_data
 from squeeze_net import squeeze_net
-from preprocessor_example import file_input_fn, mnist_batch_input_fn, image_path_getter, label_op_getter, minibatch_loader
+from preprocessor_example import mnist_batch_input_fn, minibatch_loader
 
 import functools
 import tensorflow as tf
@@ -46,15 +46,12 @@ def main(unused_argv):
     img_pointer_path = os.path.join(data_root, img_pointer_name)
     label_file_path = os.path.join(data_root, label_file_name)
 
-    img_files = image_path_getter('image_pointer')
-    op_labels = label_op_getter('labels')
     # learning
     classifier.fit(
         # input_fn=lambda: mnist_batch_input_fn(mnist[:2]),
         input_fn=lambda: minibatch_loader( \
             img_pointer_path, label_file_path, data_root, \
-            n_class=10, batch_size=100, num_epochs=1),
-        steps=20,
+            n_class=10, batch_size=100, num_epochs=10),
         monitors=[logging_hook]
     )
 

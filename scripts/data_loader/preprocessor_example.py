@@ -1,85 +1,10 @@
 import os, sys
+sys.path.append("./scripts/data_loader")
+from augmentation import augment
+
 import tensorflow as tf
 import numpy as np
 from contextlib import ExitStack
-
-
-class DataReader(tf.TFRecordReader):
-    def __init__(self):
-        super().__init__()
-
-    def read(self, filename_queue):
-        key, serialized_example = super().read(filename_queue)
-        features = tf.parse_single_example(
-          serialized_example,
-          # Defaults are not specified since both keys are required.
-          features={
-              'image_raw': tf.FixedLenFeature([], tf.string),
-              'label': tf.FixedLenFeature([], tf.int64),
-          })
-
-        # Convert from a scalar string tensor (whose single string has
-        # length mnist.IMAGE_PIXELS) to a uint8 tensor with shape
-        # [mnist.IMAGE_PIXELS].
-        image = tf.decode_raw(features['image_raw'], tf.uint8)
-        image.set_shape([784])
-
-        # OPTIONAL: Could reshape into a 28x28 image and apply distortions
-        # here.  Since we are not applying any distortions in this
-        # example, and the next step expects the image to be flattened
-        # into a vector, we don't bother.
-
-        # Convert from [0, 255] -> [-0.5, 0.5] floats.
-        image = tf.cast(image, tf.float32) * (1. / 255) - 0.5
-
-        # Convert label from a scalar uint8 tensor to an int32 scalar.
-        label = tf.cast(features['label'], tf.int32)
-
-        capacity = 20 + 3 * 100
-        images, labels = tf.train.shuffle_batch(
-            [image, label],
-            batch_size= 100,
-            capacity=capacity,
-            min_after_dequeue=20
-        )
-        return [images, labels]
-        # return "key", ([self.augment(tf.reshape(image, [28,28,1])), label]),
-
-
-    def augment(self, image):
-        # Randomly flip the image horizontally.
-        distorted_image = tf.image.random_flip_left_right(image, seed=1)
-        # image = tf.image.random_flip_up_down(image)
-
-
-        # # Randomly crop a [height, width] section of the image.
-        # distorted_image = tf.random_crop(distorted_image, [height, width, 3], seed=1)
-        # image = tf.image.resize_image_with_crop_or_pad(image, framesize, framesize)
-
-        # Because these operations are not commutative, consider randomizing
-        # the order their operation.
-        feature = tf.image.random_contrast(distorted_image, lower=0.2, upper=1.8, seed=1)
-        # distorted_image = tf.image.random_brightness(distorted_image, max_delta=63, seed=1)
-        return feature
-
-
-def input_to_model(file_list):
-    features = {'raw_data': tf.FixedLenFeature([], tf.float32),
-              'label': tf.FixedLenFeature([], tf.int64)}
-
-    images, labels = tf.contrib.learn.read_batch_examples(
-            file_list,
-            batch_size=100,
-            reader=DataReader,
-            randomize_input=True,
-            num_epochs=20,
-            queue_capacity=10000,
-            num_threads=1,
-            read_batch_size=1,
-            parse_fn=None,
-        )
-
-    return images, labels
 
 
 def mnist_batch_input_fn(dataset, batch_size=100, seed=555, num_epochs=1):
@@ -110,70 +35,6 @@ def mnist_batch_input_fn(dataset, batch_size=100, seed=555, num_epochs=1):
                               shared_name=None, name=None)
 
     return batch_dict.pop('images'), batch_dict.pop('labels')
-
-
-def file_input_fn(image_paths, op_labels, n_class, distortion=True,\
-        batch_params={'size': 100, 'min_after_dequeue': 256, 'num_preprocess_threads':1}):
-    image_fqueue = tf.train.string_input_producer(image_paths)
-
-    reader = tf.WholeFileReader()
-    key, value = reader.read(image_fqueue)
-    img = tf.image.decode_jpeg(value, channels=3)
-
-    img = tf.reshape(img, [118, 210, 3])
-    img.set_shape((118, 210, 3))
-    # img = tf.cast(img, tf.float32)
-
-    one_hot_labels = tf.one_hot(op_labels, depth=n_class)
-
-    # features = tf.parse_single_example(value, features={
-    #     'label': tf.FixedLenFeature([], tf.int64),
-    #     'image_raw': tf.FixedLenFeature([], tf.string),
-    # })
-    # label = tf.cast(features['label'], tf.int32)
-    # image = tf.decode_raw(features['image_raw'], tf.int32)
-
-    if distortion:
-        img = augment(img)
-
-    # Generate batch
-    imgs, labels = tf.train.shuffle_batch(
-        [img, one_hot_labels],
-        batch_size=batch_params['size'],
-        num_threads=batch_params['num_preprocess_threads'],
-        capacity=batch_params['min_after_dequeue'] + 3 * batch_params['size'],
-        min_after_dequeue=batch_params['min_after_dequeue'] )
-
-    return imgs, labels
-
-
-def image_path_getter(image_pointer, data_root_path='./data'):
-    image_pointer_path = os.path.join(data_root_path, image_pointer)
-    with open(image_pointer_path, 'r') as f:
-        return [file_name.rstrip() for file_name in f]
-
-
-def label_op_getter(label_file_name, data_root_path='./data'):
-    label_file_path = os.path.join(data_root_path, label_file_name)
-    with open(label_file_path, 'r') as f:
-        return tf.constant( [int(label.rstrip()) for label in f] )
-
-
-def augment(image):
-    # Randomly flip the image horizontally.
-    distorted_image = tf.image.random_flip_left_right(image, seed=1)
-    # image = tf.image.random_flip_up_down(image)
-
-
-    # # Randomly crop a [height, width] section of the image.
-    # distorted_image = tf.random_crop(distorted_image, [height, width, 3], seed=1)
-    # image = tf.image.resize_image_with_crop_or_pad(image, framesize, framesize)
-
-    # Because these operations are not commutative, consider randomizing
-    # the order their operation.
-    feature = tf.image.random_contrast(distorted_image, lower=0.2, upper=1.8, seed=1)
-    # distorted_image = tf.image.random_brightness(distorted_image, max_delta=63, seed=1)
-    return feature
 
 
 def minibatch_loader(image_list_file, label_file, data_root, \
