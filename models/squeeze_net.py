@@ -52,7 +52,8 @@ def squeeze_net(x, y, mode, n_class):
     # pool3=tf.layers.max_pooling2d(inputs=fire8, pool_size=3, strides=2)
     # fire9=Fire(pool3, 64, 256, 256)
 
-    g_pool=tf.contrib.layers.avg_pool2d(inputs=fire8, kernel_size=2)
+    g_pool=tf.contrib.layers.avg_pool2d(inputs=fire8, kernel_size=[14,25])
+    # g_pool=tf.contrib.layers.avg_pool2d(inputs=fire8, kernel_size=2)
 
     logits = tf.layers.dense(
         inputs=g_pool,
