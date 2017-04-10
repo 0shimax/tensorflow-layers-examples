@@ -58,7 +58,8 @@ def minibatch_loader(image_list_file, label_file, data_root, \
 
     # Optional Preprocessing or Data Augmentation
     # tf.image implements most of the standard image augmentation
-    image = augment(image)
+    image = augment(image, 8)
+
     # label = tf.one_hot(label, depth=n_class)
 
     # Optional Image and Label Batching
@@ -86,5 +87,5 @@ def read_labeled_image_list(image_list_file, label_file, data_root):
 def read_images_from_disk(input_queue):
     label = input_queue[1]
     file_contents = tf.read_file(input_queue[0])
-    example = tf.image.decode_jpeg(file_contents, channels=3)
+    example = tf.image.decode_image(file_contents, channels=3)
     return example, label
