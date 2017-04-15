@@ -142,7 +142,7 @@ from skimage.transform import ProjectiveTransform
 
 
 def rotate(X, intensity):
-    for i in range(X.shape[0])):
+    for i in range(X.shape[0]):
         delta = 30. * intensity # scale using augmentation intensity
         X[i] = rotate(X[i], random.uniform(-delta, delta), mode = 'edge')
     return X
@@ -151,7 +151,7 @@ def rotate(X, intensity):
 def apply_projection_transform(X, intensity):
     image_size = X.shape[1]
     d = image_size * 0.3 * intensity
-    for i in range(X.shape[0])):
+    for i in range(X.shape[0]):
         tl_top = random.uniform(-d, d)     # Top left corner, top margin
         tl_left = random.uniform(-d, d)    # Top left corner, left margin
         bl_bottom = random.uniform(-d, d)  # Bottom left corner, bottom margin
